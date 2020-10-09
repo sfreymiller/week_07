@@ -1,0 +1,407 @@
+-- Welcome to Intermediate SQL! What a time, what a place.
+
+1. Write a query to count the number of non-null rows in the low column.
+
+SELECT COUNT(low) 
+FROM tutorial.aapl_historical_stock_price
+
+-- This shows us the number of rows that have a value in the low column (3535)
+-- We can also create a column that shows the count by doing the following:
+
+SELECT COUNT(low) AS low
+FROM tutorial.aapl_historical_stock_price
+
+2. Write a query that determines counts of every single column. Which column has the most null values?
+
+SELECT COUNT(date) AS count_date,
+COUNT(year) AS count_year,
+COUNT(month) AS count_month,
+COUNT(open) AS count_open,
+COUNT(high) AS count_high,
+COUNT(low) AS count_low,
+COUNT(close) AS count_close,
+COUNT(volume) AS count_volume,
+COUNT(id) AS count_id
+FROM tutorial.aapl_historical_stock_price
+
+-- This creates a column for the count of each single column. 
+-- the 'high' column has the most null values and lowest count (3531)
+
+3. Write a query to calculate the average opening price (hint: you will need to use both COUNT and SUM, as well as some simple arithmetic.).
+
+SELECT SUM(open) AS sum_open, -- the sum of opening prices
+COUNT(open) AS count_open, -- the count of opening prices
+(SUM(open)/COUNT(open)) AS open_average -- this calculates the average opening price
+FROM tutorial.aapl_historical_stock_price
+
+-- I broke this into the sum, count and average to allow myself to double-check the ultimate value (open_average)
+-- Based on these calculations, the opening sum is roughly 583,483, while the count is 3541. The opening average, then, is roughly 165 (164.779...)
+
+4. What was Apple's lowest stock price (at the time of this data collection)?
+
+SELECT MIN(low) AS low_price -- looking at the lowest of the low prices, here
+  FROM tutorial.aapl_historical_stock_price
+
+-- 6.36!?! I should have invested. But when?
+-- I tried to use WHEN to identify the time when low = MIN(low), but I learned that aggregate functions are not allowed in WHERE
+
+5. What was the highest single-day increase in Apple's share value?
+
+SELECT MAX(close - open) AS max_increase -- find the maximum of the closing price minus the opening price
+FROM tutorial.aapl_historical_stock_price
+
+-- The maximum increase was $32.58, wow. 
+
+6. Write a query that calculates the average daily trade volume for Apple stock.
+
+SELECT AVG(volume) AS avg_daily_vol,
+MAX(volume) AS max_daily_vol, -- pulling maximum volume for context
+MIN(volume) AS min_daily_vol -- pulling minimum volume for context
+FROM tutorial.aapl_historical_stock_price
+
+-- The average daily volume is 20,745,814 shares, which makes sense given that the max is 120,466,292 and the min is 0.
+
+7. Calculate the total number of shares traded each month. Order your results chronologically.
+
+SELECT year,
+       month,
+       SUM(volume) AS shares_per_month -- calculate total shares traded per month
+  FROM tutorial.aapl_historical_stock_price
+ GROUP BY year, month -- report out shares per month and year
+ ORDER BY year, month -- sort rows by ascending year and month
+
+8. Write a query to calculate the average daily price change in Apple stock, grouped by year.
+
+SELECT year, -- we need to have the year to group by it
+       AVG(close - open) AS avg_daily_chg -- this calculates the avg daily price change
+  FROM tutorial.aapl_historical_stock_price
+ GROUP BY year -- group the average prices by year
+ ORDER BY year DESC -- seeing what it looks like from most recent to earliest, for fun
+
+-- It appears that the most recent years have not been as kind to Apple. The average daily change has been negative for the time period from 2010 to 2014. That does not, however, account for how inflation has impacted price, or a host of other factors.
+
+9. Write a query that calculates the lowest and highest prices that Apple stock achieved each month.
+
+SELECT year, -- selecting the year because we're not just looking at months from one year
+       month, -- selecting the month to ultimately group by month and year
+       MIN(low) AS minimum_price, -- the minimum low, which will be reported by month
+       MAX(high) AS maximum_price -- the maximum high, which will be reported by month
+  FROM tutorial.aapl_historical_stock_price
+ GROUP BY year, month -- group the min and max by year and month
+ ORDER BY year, month -- order the min and max by year and month, from earliest to latest
+
+-- There are so many stories here! It's interesting to see that Apple started out pretty high in 2000, but dropped to about half the price in September of that year. 
+
+10. Write a query that includes a column that is flagged "yes" when a player is from California, and sort the results with those players first.
+
+SELECT player_name,
+  hometown,
+  state,
+  CASE WHEN state = 'CA' THEN 'yes' -- This returns a column with a "yes" for each player from CA
+  ELSE 'no' END AS from_california -- This returns "no" when the player is not from CA
+  FROM benn.college_football_players
+  ORDER BY from_california DESC -- This sorts the resuls so that Californians are on top
+
+11. Write a query that includes players' names and a column that classifies them into four categories based on height. Keep in mind that the answer we provide is only one of many possible answers, since you could divide players' heights in many ways.
+
+SELECT AVG(height) AS avg_height, -- find average height (72.68)
+  MIN(height) AS min_height, -- find minimum height (0), maybe not recorded
+  MAX(height) AS max_height -- find maximum height (83, almost 7 feet)
+FROM benn.college_football_players
+
+-- I used these values to sort into 4 categories: under 5', 5-5'8", 5'8" - 6'4", and 6'4" - 7'
+
+SELECT player_name,
+  height,
+  CASE WHEN height > 0 AND height < 60 THEN 'under 60 inches' -- greater than 0 and less than 5'
+  WHEN height >= 60 AND height < 68 THEN '60 inches - 67 inches' -- 5' - 5'7, inclusive
+  WHEN height >= 68 AND height < 76 THEN '68 inches - 75 inches' -- 5'8 - 6'3, inclusive
+  WHEN height >= 76 and height < 84 THEN '76 inches - 83 inches' -- 6'4 - 6'11 (max), inclusive
+  ELSE 'no height recorded' END AS height_group -- Technically I've created 5 categories with the ELSE category
+FROM benn.college_football_players
+
+12. Write a query that selects all columns from benn.college_football_players and adds an additional column that displays the player's name if that player is a junior or senior.
+
+SELECT *, -- This selects all columns
+      CASE WHEN year = 'JR' OR year = 'SR' THEN player_name -- This prints the player name if they are a junior or senior
+            ELSE NULL END AS name_if_jr_sr -- This creates a column (name_if_jr_sr) in which the names will be printed
+  FROM benn.college_football_players
+
+13. Write a query that counts the number of 300lb+ players for each of the following regions: West Coast (CA, OR, WA), Texas, and Other (Everywhere else).
+
+SELECT CASE WHEN state IN ('CA', 'OR', 'WA') THEN 'West Coast' -- creates a category for West Coast players
+            WHEN state = 'TX' THEN 'Texas' -- creates a category for players from Texas
+            ELSE 'Other' END AS player_region, -- creates 'Other' category and names the column
+            COUNT(1) AS regions -- counts the number of players in each region
+  FROM benn.college_football_players
+  WHERE weight >= 300 -- selects only the players who weigh 300 lbs or more
+  GROUP BY 1 -- groups the count of these players by region
+
+14. Write a query that calculates the combined weight of all underclass players (FR/SO) in California as well as the combined weight of all upperclass players (JR/SR) in California.
+
+-- This was my original attempt:
+
+SELECT CASE WHEN year IN ('FR', 'SO') THEN 'underclassman' -- creates a category for FR and SO
+            ELSE NULL END AS underclassmen, -- names the column as underclassmen
+       CASE WHEN year IN ('JR', 'SR') THEN 'upperclassman' -- creates category for JR and SR
+            ELSE NULL END AS upperclassmen, -- names the column as upperclassmen
+       SUM(1) AS underclass_weight,
+       SUM(2) AS upperclass_weight
+  FROM benn.college_football_players
+  WHERE state = 'CA'
+  GROUP BY underclassmen, upperclassmen
+
+-- Corrected attempt:
+
+SELECT CASE WHEN year IN ('FR', 'SO') THEN 'underclassman' -- creates a category for FR and SO
+            WHEN year IN ('JR', 'SR') THEN 'upperclassman' -- creates category for JR and SR
+            ELSE NULL END AS classes, -- names the column as classes
+            SUM(weight) AS total_weight
+  FROM benn.college_football_players
+  WHERE state = 'CA'
+  GROUP BY 1
+
+-- I made it too complicated in my first attempt by trying to create two separate columns for underclassmen and upperclassmen and then summing them, when I could have used GROUP BY to sort them into their respective categories after the weights had been summed
+
+15. Write a query that displays the number of players in each state, with FR, SO, JR, and SR players in separate columns and another column for the total number of players. Order results such that states with the most players come first.
+
+SELECT state, -- Selected state so I could group by it later
+       COUNT(CASE WHEN year = 'FR' THEN 1 ELSE NULL END) AS fr_count, -- Creating a freshman count column
+       COUNT(CASE WHEN year = 'SO' THEN 1 ELSE NULL END) AS so_count, -- Creating a sophomore count column
+       COUNT(CASE WHEN year = 'JR' THEN 1 ELSE NULL END) AS jr_count, -- Creating a junior count column
+       COUNT(CASE WHEN year = 'SR' THEN 1 ELSE NULL END) AS sr_count, -- Creating a senior count column
+       COUNT(id) AS total_players -- Creating a total player count column (could have also used COUNT(1))
+  FROM benn.college_football_players
+GROUP BY state -- Grouping by state (there are more than 50 states, so maybe there are other countries represented?)
+ORDER BY total_players DESC -- Ordering so that states with the most players come first
+
+-- Texas, Florida, California, Georgia and Ohio have the most players
+
+16. Write a query that shows the number of players at schools with names that start with A through M, and the number at schools with names starting with N - Z.
+
+SELECT COUNT(CASE WHEN full_school_name BETWEEN 'a%' AND 'm%' THEN 1 ELSE NULL END) AS a_through_m, -- counting schools from A to M
+       COUNT(CASE WHEN full_school_name BETWEEN 'n%' AND 'z%' THEN 1 ELSE NULL END) AS n_through_z, -- counting schools from N to Z
+       COUNT(full_school_name) AS total_schools -- counting the total number of schools
+  FROM benn.college_football_players
+
+-- There are a few thousand rows that are not captured in this query, might be that school names are not listed for them
+-- Alternate solution after checking:
+
+SELECT COUNT(CASE WHEN full_school_name < 'n' THEN 1 ELSE NULL END) AS a_through_m,
+       COUNT(CASE WHEN full_school_name >= 'n' THEN 1 ELSE NULL END) AS n_through_z,
+       COUNT(full_school_name) AS total_schools
+  FROM benn.college_football_players
+
+-- The numbers add up, here. I'm wondering if any schools start with digits and are therefore considered less than 'a'
+-- Nope, they fall within the alphabet
+
+SELECT MIN(full_school_name), -- Abilene Christian Wildcats
+       MAX(full_school_name) -- Youngstown State Penguins
+  FROM benn.college_football_players
+
+-- So why the discrepancy in numbers with my first query, if BETWEEN involves inclusive bounds?
+
+17. Write a query that returns the unique values in the year column, in chronological order.
+
+SELECT DISTINCT year -- select distinct years
+  FROM tutorial.aapl_historical_stock_price
+ORDER BY year -- order by year from lowest to highest (2000 - 2014)
+
+18. Write a query that counts the number of unique values in the month column for each year.
+
+SELECT year, -- select year to group by later
+       COUNT(DISTINCT month) AS unique_months -- count the number of distinct months
+  FROM tutorial.aapl_historical_stock_price
+GROUP BY year -- sorts the count of unique months by year
+ORDER BY year -- orders the counts by year from earliest to latest
+
+-- 2014 only has one unique month
+
+18. Write a query that separately counts the number of unique values in the month column and the number of unique values in the `year` column.
+
+SELECT COUNT(DISTINCT month) AS unique_months, -- count the number of distinct months (12)
+       COUNT(DISTINCT year) AS unique_years -- count the number of distinct years (15)
+  FROM tutorial.aapl_historical_stock_price
+
+19. Write a query that selects the school name, player name, position, and weight for every player in Georgia, ordered by weight (heaviest to lightest). Be sure to make an alias for the table, and to reference all column names in relation to the alias.
+
+SELECT georgia.state AS state, -- including this to ensure that the state is Georgia for each row
+       georgia.school_name AS school, -- selecting columns in relation to the table alias (georgia)
+       georgia.player_name AS player,
+       georgia.position AS position,
+       georgia.weight AS weight
+  FROM benn.college_football_players georgia -- creating the alias for the table
+  WHERE georgia.state = 'GA' -- selecting just players in Georgia
+  ORDER BY georgia.weight DESC -- ordering by weight from heaviest to lightest
+
+-- I realize the alias did not have to be the state itself, heh.
+
+20. Write a query that displays player names, school names and conferences for schools in the "FBS (Division I-A Teams)" division.
+
+SELECT players.player_name AS player, -- Selecting and renaming players from the player table
+       players.school_name AS school, -- Selecting and renaming schools from the player table
+       teams.conference, -- Selecting conference from the teams table
+       teams.division -- Selecting division from the teams table
+  FROM benn.college_football_players players -- Creating an alias for the players table and defining it as the first one
+  JOIN benn.college_football_teams teams -- Joining the teams table by an alias
+    ON teams.school_name = players.school_name -- Using school_name as the join key
+    WHERE division = 'FBS (Division I-A Teams)' -- Selecting joined rows from this division
+
+21. Write a query that performs an inner join between the tutorial.crunchbase_acquisitions table and the tutorial.crunchbase_companies table, but instead of listing individual rows, count the number of non-null rows in each table.
+
+SELECT COUNT(companies.permalink) AS company_rows, -- counting all rows from the companies table that have a permalink value
+       COUNT(acquisitions.company_permalink) AS acquisition_rows -- counting all rows from the acquisitions table that have a company_permalink value
+  FROM tutorial.crunchbase_companies companies -- renaming this table with the alias companies
+  INNER JOIN tutorial.crunchbase_acquisitions acquisitions -- using an inner join 
+    ON companies.permalink = acquisitions.company_permalink -- defining the join values
+    
+-- There are 1673 non-null rows that have a permalink and company_permalink value
+
+22. Modify the query above to be a LEFT JOIN. Note the difference in results.
+
+SELECT COUNT(companies.permalink) AS company_rows, -- counting all rows from the companies table that have a permalink value
+       COUNT(acquisitions.company_permalink) AS acquisition_rows -- counting all rows from the acquisitions table that have a company_permalink value
+  FROM tutorial.crunchbase_companies companies -- renaming this table with the alias companies
+  LEFT JOIN tutorial.crunchbase_acquisitions acquisitions -- using a left join 
+    ON companies.permalink = acquisitions.company_permalink -- defining the join values
+
+-- This returns 27355 non-null rows for the company table and 1673 non-null rows for the acquisition table. If there was not a matching value for company_permalink in the acquisitions table, those rows were not counted, whereas all values of permalink from the companies table were counted, regardless of whether they had a match in the second table or not.
+
+23. Count the number of unique companies (don't double-count companies) and unique acquired companies by state. Do not include results for which there is no state data, and order by the number of acquired companies from highest to lowest.
+
+SELECT companies.state_code AS state, -- selecting the state column from companies to group the counts later
+       COUNT(DISTINCT companies.permalink) AS unique_companies, -- counting all unique permalink values
+       COUNT(DISTINCT acquisitions.company_permalink) AS unique_acquisitions-- counting all unique company_permalink value
+  FROM tutorial.crunchbase_companies companies -- renaming this table with the alias companies
+  LEFT JOIN tutorial.crunchbase_acquisitions acquisitions -- using a left join 
+    ON companies.permalink = acquisitions.company_permalink -- defining the join values
+WHERE companies.state_code IS NOT NULL -- eliminate results for which there is no state data
+GROUP BY state -- list the unique companies and unique acquisitions by state
+ORDER BY unique_acquisitions DESC -- order the results by acquisitions from highest to lowest
+
+-- California, New York and Massachusetts come in top three! Shocker.
+-- In the example they group by and order by the columns, which makes sense!
+
+24. Rewrite the previous practice query in which you counted total and acquired companies by state, but with a RIGHT JOIN instead of a LEFT JOIN. The goal is to produce the exact same results.
+
+SELECT companies.state_code AS state, -- selecting the state column from companies to group the counts later
+       COUNT(DISTINCT companies.permalink) AS unique_companies, -- counting all unique permalink values
+       COUNT(DISTINCT acquisitions.company_permalink) AS unique_acquisitions-- counting all unique company_permalink value
+  FROM tutorial.crunchbase_acquisitions acquisitions -- renaming this table with the alias acquisitions
+  RIGHT JOIN tutorial.crunchbase_companies companies -- using a right join this time
+    ON acquisitions.company_permalink = companies.permalink -- defining the join values, switched them to match tables
+WHERE companies.state_code IS NOT NULL -- eliminate results for which there is no state data
+GROUP BY state -- list the unique companies and unique acquisitions by state
+ORDER BY unique_acquisitions DESC -- order the results by acquisitions from highest to lowest
+
+-- woo got the same results! This makes sense. 
+
+25. Write a query that shows a company's name, "status" (found in the Companies table), and the number of unique investors in that company. Order by the number of investors from most to fewest. Limit to only companies in the state of New York.
+
+SELECT companies.name AS name, -- getting company name
+       companies.status AS status, -- getting company status
+       COUNT(DISTINCT investments.investor_permalink), -- looking at the count of unique investors
+       investments.company_state_code AS state -- we need to find our NY
+  FROM tutorial.crunchbase_companies companies
+  LEFT JOIN tutorial.crunchbase_investments investments
+  ON companies.permalink = investments.company_permalink
+  WHERE investments.company_state_code = 'NY' -- limits the query to companies in NY
+  GROUP BY 1, 2, 4 -- write this out in the future, but group by every column except the count of unique investments
+  ORDER BY 3 DESC -- order by unique investments from greatest to least
+
+26. Write a query that lists investors based on the number of companies in which they are invested. Include a row for companies with no investor, and order from most companies to least.
+
+SELECT investments.investor_name, -- pulls investor names from the investor table, to group by later
+       COUNT(DISTINCT companies.permalink) -- counts the number of distinct companies for each investor
+  FROM tutorial.crunchbase_companies companies -- this ensures that we have all the companies, regardless of investors
+  LEFT JOIN tutorial.crunchbase_investments investments -- performs a left join so that companies without investors are included
+  ON companies.permalink = investments.company_permalink -- joins by join key
+  GROUP BY investments.investor_name -- group by investor name, as promised
+  ORDER BY COUNT(DISTINCT companies.permalink) DESC -- sort by number of distinct companies invested in, descending
+
+-- This was my first attempt. It ran for over 4 minutes before getting me the right answer. 
+
+SELECT CASE WHEN investments.investor_name IS NULL THEN 'No Investor' -- creates a case for companies without investors
+            ELSE investments.investor_name END AS investor, -- pulls the investor name when there is an investor
+       COUNT(DISTINCT companies.permalink) -- counts the number of distinct companies for each investor
+  FROM tutorial.crunchbase_companies companies -- this ensures that we have all the companies, regardless of investors
+  LEFT JOIN tutorial.crunchbase_investments investments -- performs a left join so that companies without investors are included
+  ON companies.permalink = investments.company_permalink -- joins by join key
+  GROUP BY investments.investor_name -- group by investor name, as promised
+  ORDER BY COUNT(DISTINCT companies.permalink) DESC -- sort by number of distinct companies invested in, descending
+
+-- Ha! This took 4 minutes, 5 seconds and got me the same answer, just with a label this time. Good to know. It just takes time sometimes.
+
+27. Write a query that joins tutorial.crunchbase_companies and tutorial.crunchbase_investments_part1 using a FULL JOIN. Count up the number of rows that are matched/unmatched as in the example above.
+
+SELECT COUNT(CASE WHEN companies.permalink IS NOT NULL AND investments.company_permalink IS NULL -- counts cases when there is just a company, no investment
+                  THEN companies.permalink ELSE NULL END) AS companies_only,
+       COUNT(CASE WHEN companies.permalink IS NOT NULL AND investments.company_permalink IS NOT NULL -- counts cases with companies and investments
+                  THEN companies.permalink ELSE NULL END) AS both_tables,
+       COUNT(CASE WHEN companies.permalink IS NULL AND investments.company_permalink IS NOT NULL -- counts investments without companies (how?!)
+                  THEN investments.company_permalink ELSE NULL END) AS investments_only
+  FROM tutorial.crunchbase_companies companies
+  FULL JOIN tutorial.crunchbase_investments_part1 investments
+    ON companies.permalink = investments.company_permalink
+
+-- There are 13707 rows in the joined table with companies only, 33838 with both, and 8647 with investments only (makes sense that this would be the smallest value, but I'm still puzzled as to how there can be an investment without a company to be invested in... 
+
+28. Write a query that appends the two crunchbase_investments datasets above (including duplicate values). Filter the first dataset to only companies with names that start with the letter "T", and filter the second to companies with names starting with "M" (both not case-sensitive). Only include the company_permalink, company_name, and investor_name columns.
+
+SELECT company_permalink, -- selecting the three relevant columns
+       company_name,
+       investor_name
+  FROM tutorial.crunchbase_investments_part1
+  WHERE company_name ILIKE 't%' -- looking for company names starting with "T"
+
+ UNION ALL
+
+ SELECT company_permalink, -- making sure these columns match the ones in the first dataset
+        company_name,
+        investor_name
+   FROM tutorial.crunchbase_investments_part2
+   WHERE company_name ILIKE 'm%' -- looking for company names starting with "M"
+
+29. Write a query that shows 3 columns. The first indicates which dataset (part 1 or 2) the data comes from, the second shows company status, and the third is a count of the number of investors.
+
+Hint: you will have to use the tutorial.crunchbase_companies table as well as the investments tables. And you'll want to group by status and dataset.
+
+SELECT CASE WHEN part1.company_permalink IS NOT NULL THEN 'part 1'
+            ELSE NULL END AS "part",
+       part1.investor_permalink
+  FROM tutorial.crunchbase_investments_part1 part1
+
+ UNION ALL
+
+ SELECT CASE WHEN part2.company_permalink IS NOT NULL THEN 'part 2'
+             ELSE NULL END AS "part",
+        part2.investor_permalink
+   FROM tutorial.crunchbase_investments_part2 part2
+
+-- I was at this stage, playing around with stacking the datasets while creating a column named "part" that identified which dataset the row came from. This worked, and then I tried to use JOIN but couldn't figure out how to encompass the union. I checked the answer for a hint and realized that they used this:
+
+SELECT 'investments_part1' AS dataset_name, -- creating a column, dataset_name, where the value in each row is 'investments_part1'
+
+-- So I decided to check out the first part of this process, before it was united with the second part. Looks like they used a LEFT JOIN to incorporate data from the companies table, which I was trying to do at a later point (after the UNION - I can't do that!). So I'll need to use two joins, one on either side of the union.
+
+-- Ultimate answer, which resulted in 3 rows, 8 columns
+
+SELECT 'investments_part1' AS dataset, -- creating a column for dataset name
+       companies.status, -- collecting status from the companies table
+       COUNT(DISTINCT investments1.investor_permalink) AS investor_count -- counting investors from investments part 1
+  FROM tutorial.crunchbase_companies companies
+  LEFT JOIN tutorial.crunchbase_investments_part1 investments1 -- using a left join so that companies are matched with their investors
+  ON companies.permalink = investments1.company_permalink
+  GROUP BY dataset, companies.status -- grouping by these two values so that the investor count is highlighted
+
+ UNION ALL -- Creating a union of both datasets so that even duplicate values are included (these would be used to count distinct investors/eliminated in that process, anyway)
+
+ SELECT 'investments_part2' AS dataset,
+        companies.status,
+        COUNT(DISTINCT investments2.investor_permalink) AS investor_count
+   FROM tutorial.crunchbase_companies companies
+   LEFT JOIN tutorial.crunchbase_investments_part2 investments2
+   ON companies.permalink = investments2.company_permalink 
+   GROUP BY dataset, companies.status
+
+-- As you can see, the second part (investments2 runs through the same query process as the first!
